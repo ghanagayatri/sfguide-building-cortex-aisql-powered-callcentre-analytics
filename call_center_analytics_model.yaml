@@ -1,0 +1,402 @@
+name: call_center_analytics_model
+description: |-
+  Semantic model for call center analytics data including customer interactions,
+    claims processing, policy management, and representative performance metrics.
+tables:
+  - name: call_center_interactions
+    base_table:
+      database: CALL_CENTRE_ANALYTICS_DB
+      schema: PUBLIC
+      table: STREAMLITAPPTABLE
+    dimensions:
+      - name: audio_file_name
+        expr: AUDIO_FILE_NAME
+        description: The name of the audio file being played or analyzed in the application.
+        synonyms:
+          - audio_file
+          - audio_clip
+          - sound_file
+          - audio_recording
+          - voice_file
+          - audio_data
+          - sound_clip
+          - audio_sample
+          - "file name"
+          - "recording"
+          - "call recording"
+        data_type: VARCHAR(100)
+        sample_values:
+          - audiofile18.mp3
+          - audiofile12.mp3
+          - audiofile4.mp3
+      - name: call_to_action
+        expr: CALLTOACTION
+        description: This column captures the specific action or task that a customer or user is trying to accomplish or has accomplished through the application, providing insight into the purpose or intent behind their interaction.
+        synonyms:
+          - call_to_action
+          - action_required
+          - next_step
+          - recommended_action
+          - suggested_action
+          - action_item
+          - to_do
+          - follow_up_action
+          - required_action
+          - "action needed"
+          - "next action"
+          - "follow up action"
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - Check claim status for hit-and-run incident
+          - Add new vehicle to existing policy
+          - Review denied claim for hail damage
+      - name: claim_number
+        expr: CLAIMNUMBER
+        description: Unique identifier assigned to a claim, used to track and manage the claim throughout its lifecycle.
+        synonyms:
+          - claim_id
+          - claim_reference
+          - policy_claim_number
+          - claim_identifier
+          - claim_code
+          - case_number
+          - claim_reference_number
+          - claim_file_number
+          - "claim number"
+          - "claim id"
+          - "claim num"
+          - "claim"
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - NotFound
+          - CLM789012
+          - CLM456789
+      - name: customer_name
+        expr: CUSTOMER
+        description: The name of the customer who has interacted with the application.
+        synonyms:
+          - customer
+          - caller
+          - "client"
+          - "customer name"
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - Sophia Baker
+          - Kevin Anderson
+          - Lisa Carter
+      - name: call_intent
+        expr: INTENT
+        description: The purpose of the interaction or transaction, such as updating policy information, disputing a claim, or checking the status of a claim.
+        synonyms:
+          - intent
+          - purpose
+          - objective
+          - target
+          - intention
+          - motive
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - Claim Status
+          - Policy Update
+          - Claim Dispute
+      - name: issue_type
+        expr: ISSUE
+        description: This column contains a list of reasons or explanations for issues or problems related to insurance claims, as reported by customers or identified by the insurance company.
+        synonyms:
+          - problem
+          - concern
+          - complaint
+          - issue
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - No updates received on hit-and-run claim
+          - Customer needs to update policy with new vehicle
+          - Partial claim denial for hail damage due to adjuster determining some dents as pre-existing
+      - name: policy_number
+        expr: POLICYNUMBER
+        description: Unique identifier assigned to a policy, used to distinguish and track individual policies within the system.
+        synonyms:
+          - policy_id
+          - policy_code
+          - insurance_policy_number
+          - policy_reference
+          - policy_identifier
+          - policy number
+          - pol num
+          - policy ID
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - POL890123
+          - POL678901
+          - POL345678
+      - name: purpose_of_call
+        expr: PURPOSEOFCALL
+        description: The purpose or reason for the customer's interaction with the insurance company, such as inquiring about a claim status, requesting a vehicle change, or disputing a claim denial.
+        synonyms:
+          - "reason for call"
+          - "call purpose"
+          - "purpose of call"
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - Claim status inquiry
+          - Vehicle change request
+          - Dispute claim denial for hail damage
+      - name: representative_name
+        expr: REPRESENTATIVE
+        description: The name of the sales representative assigned to the account.
+        synonyms:
+          - agent
+          - representative_name
+          - rep
+          - customer_service_agent
+          - customer_support_agent
+          - call_agent
+          - account_representative
+          - sales_representative
+          - customer_representative
+          - support_agent
+          - agent name
+          - service rep
+          - customer service representative
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - Nathan
+          - Ella
+          - Kevin
+      - name: resolution_type
+        expr: RESOLUTION
+        description: The current status or outcome of a claim or issue being handled by the claims department.
+        synonyms:
+          - solution
+          - outcome
+          - result
+          - conclusion
+          - settlement
+          - answer
+          - fix
+          - remedy
+          - resolve
+          - final_result
+          - disposition
+          - resolution
+          - how resolved
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - Claims department investigating
+          - Successfully added new Toyota Camry and removed old Honda Accord
+          - Scheduled re-inspection with different adjuster
+      - name: response_mode
+        expr: RESPONSEMODE
+        description: The method by which the customer responded to the initial contact, such as a phone call or in-person call.
+        synonyms:
+          - response_type
+          - communication_method
+          - reply_mode
+          - interaction_channel
+          - feedback_mechanism
+          - answer_format
+          - reaction_mode
+          - reply_format
+          - response mode
+          - communication method
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - Phone
+          - Call
+          - Phone call
+      - name: update_mode
+        expr: MODEOFUPDATE
+        description: The method by which the application's status is updated, such as through email notification, phone notification, or a direct phone call.
+        synonyms:
+          - update_method
+          - update_type
+          - update_mode
+          - method_of_revision
+          - revision_type
+          - update_category
+          - update mode
+          - notification method
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - Email
+          - Phone
+          - Phone call
+      - name: next_steps
+        expr: NEXTSTEPS
+        description: This column captures the next steps or actions that need to be taken after a specific event or interaction, providing a clear direction for follow-up activities.
+        synonyms:
+          - action_items
+          - follow_up_tasks
+          - future_actions
+          - next_actions
+          - subsequent_steps
+          - to_do_list
+          - action_plan
+          - further_steps
+          - recommended_actions
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - Update to be provided within 48 hours
+          - Email updated policy documents and insurance cards
+          - Customer will receive call to schedule reinspection within 48 hours
+      - name: call_sentiment
+        expr: CALLSENTIMENT
+        description: The sentiment of the call, indicating whether the overall tone of the call was negative or positive
+        synonyms:
+          - call_emotion
+          - call_tone
+          - call_mood
+          - sentiment_score
+          - call_attitude
+          - emotional_response
+          - caller_sentiment
+          - conversation_sentiment
+          - sentiment
+          - mood
+          - customer sentiment
+          - satisfaction
+        data_type: VARCHAR(8)
+        sample_values:
+          - Negative
+          - Positive
+      - name: first_call_resolution
+        expr: FIRSTCALLRESOLUTION
+        description: Indicates whether the customer's issue was resolved on the first call to the support team.
+        synonyms:
+          - first_call_fixed
+          - issue_resolved_on_first_call
+          - first_contact_resolution
+          - one_call_resolution
+          - first_time_fix_rate
+          - first_call_success
+          - issue_solved_on_first_attempt
+          - first_contact_fix
+          - FCR
+          - first call resolution
+        data_type: VARCHAR(3)
+        sample_values:
+          - "No"
+          - "Yes"
+      - name: call_summary
+        expr: CALL_SUMMARY
+        description: A brief summary of customer service calls, including the customer's issue, the representative's response, and any resulting actions or resolutions.
+        synonyms:
+          - call_description
+          - call_details
+          - call_overview
+          - conversation_summary
+          - summary_of_call
+          - call_transcript_summary
+          - call summary
+          - short description
+        data_type: VARCHAR(16777216)
+        sample_values:
+          - Sophia Baker called AutoAssure Insurance to inquire about the status of her hit-and-run insurance claim with policy number Paul 890123. Nathan from AutoAssure provided her with an update that the claims department is working on her case and she can expect an update within the next 48 hours.
+          - Ella helped Kevin add his new 2024 Toyota Camry SE to his insurance policy with a higher premium due to its value and newer model year. Kevin also added gap coverage for an extra cost. The changes were effective immediately.
+          - Lisa Carter called about confusion over a denied claim for hail damage on her car with policy number Paul 345678 and claim number CLM 345678. The adjuster determined some damage was pre-existing, but Lisa insisted it was new. A second inspection was scheduled with a different adjuster and her file was flagged for supervisory review. The full claim amount would be processed if the second adjuster agreed all damage was from hail. The reinspection was promised within 48 hours.
+    time_dimensions:
+      - name: call_date
+        expr: DATETIME
+        description: Date of Application Submission
+        synonyms:
+          - date
+          - timestamp
+          - date_time
+          - call date
+          - when
+        data_type: DATE
+        sample_values:
+          - "2025-02-27"
+          - "2025-01-25"
+          - "2024-11-15"
+    facts:
+      - name: call_duration
+        expr: DURATION
+        description: The amount of time, in seconds, that a user spent interacting with the Streamlit app.
+        synonyms:
+          - length
+          - time
+          - span
+          - period
+          - elapsed_time
+          - time_elapsed
+          - call_duration
+          - audio_length
+          - duration
+          - call length
+          - minutes
+        data_type: FLOAT
+        default_aggregation: 0
+        sample_values:
+          - 63.66044
+          - 162.06369
+          - 112.32656
+    description: "Contains detailed information about customer calls to the call center"
+    synonyms: []
+    primary_key:
+      columns:
+        - AUDIO_FILE_NAME
+        - DATETIME
+    unique_keys:
+      - columns:
+        - AUDIO_FILE_NAME
+        - DATETIME
+    metrics:
+      - name: total_calls
+        expr: count(*)
+        description: Total number of calls
+        synonyms:
+          - call count
+          - number of calls
+          - call volume
+      - name: total_call_time
+        expr: SUM(DURATION)/60
+        description: Total time spent on all calls in minutes
+        synonyms:
+          - "total duration"
+          - "total call time"
+          - "cumulative time"
+      - name: first_call_resolution_rate
+        expr: (SUM(CASE WHEN call_center_interactions.FIRSTCALLRESOLUTION = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*))
+        description: Percentage of calls resolved on first contact
+        synonyms:
+          - "FCR rate"
+          - "resolution rate"
+          - "success rate"
+      - name: average_call_duration
+        expr: AVG(DURATION)/60
+        description: Average duration of calls in minutes
+        synonyms:
+          - "AVG DURATION"
+          - "average call time"
+custom_instructions: >
+  When analyzing call center data, prioritize customer satisfaction metrics and operational efficiency.
+  Always consider both the customer perspective (sentiment, resolution) and business perspective (duration, volume).
+  For date-based queries, default to the most recent complete month found in the table unless otherwise specified.
+  For date-based queries if users is asking for last month then check what is the max month in the table as the current month and perform date subtraction to get the last month.
+  When discussing representatives, focus on performance metrics like FCR rate and customer satisfaction.
+  For sentiment analysis, consider the context of the issue type and resolution outcome.
+  Ensure that all numeric columns are rounded to 2 decimal points in the output.
+
+
+# verified_queries:
+#   - name: average_resolution_time_by_representative
+#     question: "What is the average call duration for each representative?"
+#     use_as_onboarding_question: true
+#     sql: "SELECT representative_name, avg(call_duration) as avg_duration FROM __CALL_CENTER_INTERACTIONS GROUP BY representative_name ORDER BY avg_duration DESC"
+#   - name: sentiment_by_issue_type
+#     question: "What is the sentiment breakdown by issue type?"
+#     use_as_onboarding_question: true
+#     sql: "SELECT issue_type, call_sentiment, count(*) as call_count FROM __CALL_CENTER_INTERACTIONS WHERE issue_type IS NOT NULL AND call_sentiment IS NOT NULL GROUP BY issue_type, call_sentiment ORDER BY issue_type, call_sentiment LIMIT 10"
+#   - name: fcr_rate_by_representative
+#     question: "Which representatives have the highest first call resolution rate?"
+#     use_as_onboarding_question: true
+#     sql: "SELECT representative_name, round((sum(CASE WHEN first_call_resolution = 'Yes' THEN 1 ELSE 0 END) * 100.0 / count(*)), 2) as fcr_rate_percent FROM __CALL_CENTER_INTERACTIONS GROUP BY representative_name ORDER BY fcr_rate_percent DESC LIMIT 10"
+#   - name: calls_requiring_followup
+#     question: "How many calls were not resolved on the first attempt?"
+#     use_as_onboarding_question: true
+#     sql: "SELECT count(*) as calls_needing_followup, round((count(*) * 100.0 / (select count(*) from __CALL_CENTER_INTERACTIONS)), 2) as percentage_of_total FROM __CALL_CENTER_INTERACTIONS WHERE first_call_resolution = 'No'"
+#   - name: top_customer_issues
+#     question: "What are the most common issues customers call about?"
+#     use_as_onboarding_question: true
+#     sql: "SELECT issue_type, count(*) as call_count FROM __CALL_CENTER_INTERACTIONS WHERE issue_type is not null GROUP BY issue_type ORDER BY call_count DESC LIMIT 10"
