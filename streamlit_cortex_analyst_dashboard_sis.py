@@ -1355,7 +1355,7 @@ def overview_dashboard():
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("#### 📋 **Purpose of Call**")
+        st.markdown("#### 📋 **Top 5 Purpose of Call**")
         with st.container(border=True):
             # Purpose of call distribution with business insights
             purpose_query = f"""
@@ -1370,7 +1370,7 @@ def overview_dashboard():
                   AND PURPOSEOFCALL IS NOT NULL
                 GROUP BY PURPOSEOFCALL
                 ORDER BY value DESC
-                LIMIT 8
+                LIMIT 5
             """
             purpose_df = load_data(purpose_query)
             
@@ -1435,7 +1435,7 @@ def overview_dashboard():
                   AND CALLSENTIMENT IS NOT NULL
                 GROUP BY CALLSENTIMENT
                 ORDER BY value DESC
-                LIMIT 8
+                -- LIMIT 8
             """
             sentiment_df = load_data(sentiment_query)
             
@@ -1503,10 +1503,10 @@ def overview_dashboard():
                         COUNT(*) as total_calls,
                         COUNT(*) / COUNT(DISTINCT DATE(DATETIME)) as avg_daily_calls
                     FROM PUBLIC.STREAMLITAPPTABLE
-                    WHERE DATETIME >= DATEADD(month, -2, CURRENT_DATE())
+                    WHERE DATETIME >= DATEADD(month, -8, CURRENT_DATE())
                     GROUP BY YEAR(DATETIME), MONTH(DATETIME)
                     ORDER BY call_year DESC, call_month DESC
-                    LIMIT 2
+                    LIMIT 8
                 )
                 SELECT 
                     call_year,
@@ -1577,7 +1577,7 @@ def overview_dashboard():
                   AND CALLSENTIMENT IS NOT NULL
                 GROUP BY CALLSENTIMENT
                 ORDER BY count DESC
-                LIMIT 1
+                -- LIMIT 1
             """
             sent_df = load_data(sentiment_query)
             
