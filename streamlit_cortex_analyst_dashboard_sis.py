@@ -457,12 +457,12 @@ def show_file_upload_section():
             # Step 1: Transcribing text from audio
             progress_container.progress(0.25)
             status_container.info("🎙️ Step 1/4: Transcribing text from audio...")
-            time.sleep(10)  # Realistic time for audio transcription
+            time.sleep(5)  # Realistic time for audio transcription
             
             # Step 2: Extracting information using Cortex AISQL
             progress_container.progress(0.50)
             status_container.info("🧠 Step 2/4: Extracting information using Cortex AISQL...")
-            time.sleep(10)  # Time for AI processing
+            time.sleep(5)  # Time for AI processing
             
             # Step 3: Identifying speaker and customer
             progress_container.progress(0.75)
