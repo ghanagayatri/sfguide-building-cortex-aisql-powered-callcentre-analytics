@@ -356,15 +356,16 @@ def show_file_upload_section():
         st.markdown("""
         **UI Upload (This Interface):**
         - **Formats:** MP3, WAV only
-        - **Max Size:** 200 MB  
+        - **Max Size:** 200 MB for larger than 200 MB upload to stage and process using stored procedures
         - **Max Duration:** 90 minutes
         
-        **Large Files (200+ MB):**
-        - Upload directly to Snowflake stage
-        - Then process using stored procedures
+        **Cortex AI Transcribe:**
         - Supports up to 700 MB files
-        
+        - Max Duration: 90 minutes
+        - Only  .mp3 and .wav are officially supported.
+    
         **Note:** Audio longer than 90 minutes will be automatically truncated during processing.
+    
         """)
     
     
@@ -375,6 +376,11 @@ def show_file_upload_section():
         st.session_state.uploaded_file_name = None
     if 'upload_completed' not in st.session_state:
         st.session_state.upload_completed = False
+    # Track processed audio status
+    if 'audio_processed' not in st.session_state:
+        st.session_state.audio_processed = False
+    if 'processed_file_name' not in st.session_state:
+        st.session_state.processed_file_name = None
     
     # File uploader widget
     uploaded_file = st.sidebar.file_uploader(
@@ -382,6 +388,10 @@ def show_file_upload_section():
         type=['mp3', 'wav'],
         help="Supported formats: MP3, WAV | UI Max: 200MB | Max duration: 90 minutes | Large files: upload to stage"
     )
+    
+    # Show processed status in sidebar when no file is being uploaded
+    if st.session_state.audio_processed and not uploaded_file:
+        st.sidebar.success(f"✅ Transcribed and Processed: {st.session_state.processed_file_name}")
     
     if uploaded_file is not None:
         # Reset upload completed flag when a new file is selected
@@ -430,12 +440,12 @@ def show_file_upload_section():
             if success:
                 st.sidebar.success(f"✅ Upload completed successfully!")
                 st.sidebar.info(f"📁 Stored as: {file_path}")
-                st.sidebar.balloons()
+                # st.sidebar.balloons()
                 # Store the file path and name in session state for processing button
                 st.session_state.uploaded_file_path = file_path
                 st.session_state.uploaded_file_name = uploaded_file.name
                 st.session_state.upload_completed = True
-                st.rerun()
+                # st.rerun()
             else:
                 st.sidebar.error("❌ Upload failed. Please try again.")
                 st.session_state.upload_completed = False
@@ -456,22 +466,22 @@ def show_file_upload_section():
             
             # Step 1: Transcribing text from audio
             progress_container.progress(0.25)
-            status_container.info("🎙️ Step 1/4: Transcribing text from audio...")
-            time.sleep(5)  # Realistic time for audio transcription
+            # status_container.info("🎙️ Step 1/4: Transcribing text from audio...")
+            # time.sleep(5)  # Realistic time for audio transcription
             
             # Step 2: Extracting information using Cortex AISQL
             progress_container.progress(0.50)
-            status_container.info("🧠 Step 2/4: Extracting information using Cortex AISQL...")
-            time.sleep(5)  # Time for AI processing
+            # status_container.info("🧠 Step 2/4: Extracting information using Cortex AISQL...")
+            # time.sleep(5)  # Time for AI processing
             
             # Step 3: Identifying speaker and customer
             progress_container.progress(0.75)
-            status_container.info("👥 Step 3/4: Identifying speaker and customer...")
-            time.sleep(10)  # Time for speaker identification
+            # status_container.info("👥 Step 3/4: Identifying speaker and customer...")
+            # time.sleep(10)  # Time for speaker identification
             
             # Step 4: Execute the actual processing and populate tables
             progress_container.progress(0.90)
-            status_container.info("📊 Step 4/4: Populating tables for Analytics and for Chatbot...")
+            # status_container.info("📊 Step 4/4: Populating tables for Analytics and for Chatbot...")
             
             proc_success, proc_message = call_audio_processing_procedure(st.session_state.uploaded_file_path)
             
@@ -481,6 +491,9 @@ def show_file_upload_section():
             if proc_success:
                 status_container.success(f"🎯 Processing complete: {proc_message}")
                 st.sidebar.balloons()
+                # Set processed status
+                st.session_state.audio_processed = True
+                st.session_state.processed_file_name = st.session_state.uploaded_file_name
                 # Clear the session state after successful processing
                 st.session_state.uploaded_file_path = None
                 st.session_state.uploaded_file_name = None
@@ -489,8 +502,9 @@ def show_file_upload_section():
                 info_container.empty()
                 progress_container.empty()
                 status_container.empty()
-                # Refresh the interface to update file lists and data
-                st.rerun()
+                # Show refresh instruction instead of auto-rerun
+                st.sidebar.info("💡 Audio Processing Completed. Click '🔄 Refresh List' to see the Transcribed and processed audio file")
+                # Removed st.rerun() to prevent clearing the processed status
             else:
                 status_container.error(f"❌ Processing failed: {proc_message}")
                 info_container.empty()
@@ -1191,6 +1205,9 @@ def overview_dashboard():
                 if st.button("🔄 Refresh List", key="refresh_audio_files", use_container_width=True):
                     # Clear cache to force refresh of data
                     st.cache_data.clear()
+                    # Clear processed status when refreshing
+                    st.session_state.audio_processed = False
+                    st.session_state.processed_file_name = None
                     st.rerun()
             
             select_audio_file = st.selectbox("Select Audio File", audio_files_list, key='overview_audiofile')
@@ -1222,7 +1239,12 @@ def overview_dashboard():
                     st.session_state.selected_action = 'related'
             
             # Display results in full width below the buttons
-            if st.session_state.selected_action == 'play':
+            if st.session_state.selected_action is None and st.session_state.get('audio_processed', False):
+                st.markdown("---")
+                st.markdown("### ✅ Processing Status")
+                st.success(f"**Transcribed and Processed:** {st.session_state.get('processed_file_name', 'Audio file')}")
+                st.info("💡 Select an option above to view audio details, summary, or play the file.")
+            elif st.session_state.selected_action == 'play':
                 st.markdown("---")
                 st.markdown("### 🎵 Audio Player")
                 
@@ -1754,10 +1776,16 @@ def main():
     if st.sidebar.button("📈 Overview Dashboard", use_container_width=True, 
                         type="primary" if st.session_state.current_page == "📊 Overview Dashboard" else "secondary"):
         st.session_state.current_page = "📊 Overview Dashboard"
+        # Clear processed status when navigating
+        st.session_state.audio_processed = False
+        st.session_state.processed_file_name = None
         st.rerun()
     if st.sidebar.button("📊 Advanced Analytics", use_container_width=True,
                         type="primary" if st.session_state.current_page == "📈 Advanced Analytics" else "secondary"):
         st.session_state.current_page = "📈 Advanced Analytics"
+        # Clear processed status when navigating
+        st.session_state.audio_processed = False
+        st.session_state.processed_file_name = None
         st.rerun()
     
     st.sidebar.markdown("---")
@@ -1765,6 +1793,9 @@ def main():
     if st.sidebar.button("💬 Conversational Chat Interface - Analyst", use_container_width=True,
                         type="primary" if st.session_state.current_page == "💬 Conversational Chat Interface - Analyst" else "secondary"):
         st.session_state.current_page = "💬 Conversational Chat Interface - Analyst"
+        # Clear processed status when navigating
+        st.session_state.audio_processed = False
+        st.session_state.processed_file_name = None
         st.rerun()
 
     # Audio file upload section
