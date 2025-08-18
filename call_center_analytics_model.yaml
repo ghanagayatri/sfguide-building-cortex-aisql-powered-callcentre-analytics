@@ -7,10 +7,10 @@ tables:
     base_table:
       database: CALL_CENTRE_ANALYTICS_DB
       schema: PUBLIC
-      table: STREAMLITAPPTABLE
+      table: ANALYZED_TRANSCRIPTIONS_APP
     dimensions:
-      - name: audio_file_name
-        expr: AUDIO_FILE_NAME
+      - name: audio_file
+        expr: AUDIO_FILE
         description: The name of the audio file being played or analyzed in the application.
         synonyms:
           - audio_file
@@ -30,7 +30,7 @@ tables:
           - audiofile12.mp3
           - audiofile4.mp3
       - name: call_to_action
-        expr: CALLTOACTION
+        expr: CALL_TO_ACTION
         description: This column captures the specific action or task that a customer or user is trying to accomplish or has accomplished through the application, providing insight into the purpose or intent behind their interaction.
         synonyms:
           - call_to_action
@@ -51,7 +51,7 @@ tables:
           - Add new vehicle to existing policy
           - Review denied claim for hail damage
       - name: claim_number
-        expr: CLAIMNUMBER
+        expr: CLAIM_NUMBER
         description: Unique identifier assigned to a claim, used to track and manage the claim throughout its lifecycle.
         synonyms:
           - claim_id
@@ -85,7 +85,7 @@ tables:
           - Kevin Anderson
           - Lisa Carter
       - name: call_intent
-        expr: INTENT
+        expr: CALL_INTENT
         description: The purpose of the interaction or transaction, such as updating policy information, disputing a claim, or checking the status of a claim.
         synonyms:
           - intent
@@ -113,7 +113,7 @@ tables:
           - Customer needs to update policy with new vehicle
           - Partial claim denial for hail damage due to adjuster determining some dents as pre-existing
       - name: policy_number
-        expr: POLICYNUMBER
+        expr: POLICY_NUMBER
         description: Unique identifier assigned to a policy, used to distinguish and track individual policies within the system.
         synonyms:
           - policy_id
@@ -130,7 +130,7 @@ tables:
           - POL678901
           - POL345678
       - name: purpose_of_call
-        expr: PURPOSEOFCALL
+        expr: PURPOSE_OF_CALL
         description: The purpose or reason for the customer's interaction with the insurance company, such as inquiring about a claim status, requesting a vehicle change, or disputing a claim denial.
         synonyms:
           - "reason for call"
@@ -186,7 +186,7 @@ tables:
           - Successfully added new Toyota Camry and removed old Honda Accord
           - Scheduled re-inspection with different adjuster
       - name: response_mode
-        expr: RESPONSEMODE
+        expr: RESPONSE_MODE
         description: The method by which the customer responded to the initial contact, such as a phone call or in-person call.
         synonyms:
           - response_type
@@ -205,7 +205,7 @@ tables:
           - Call
           - Phone call
       - name: update_mode
-        expr: MODEOFUPDATE
+        expr: MODE_OF_UPDATE
         description: The method by which the application's status is updated, such as through email notification, phone notification, or a direct phone call.
         synonyms:
           - update_method
@@ -222,7 +222,7 @@ tables:
           - Phone
           - Phone call
       - name: next_steps
-        expr: NEXTSTEPS
+        expr: NEXT_STEPS
         description: This column captures the next steps or actions that need to be taken after a specific event or interaction, providing a clear direction for follow-up activities.
         synonyms:
           - action_items
@@ -240,7 +240,7 @@ tables:
           - Email updated policy documents and insurance cards
           - Customer will receive call to schedule reinspection within 48 hours
       - name: call_sentiment
-        expr: CALLSENTIMENT
+        expr: CONVERSATION_SENTIMENT
         description: The sentiment of the call, indicating whether the overall tone of the call was negative or positive
         synonyms:
           - call_emotion
@@ -250,17 +250,18 @@ tables:
           - call_attitude
           - emotional_response
           - caller_sentiment
-          - conversation_sentiment
+          - conversation sentiment
           - sentiment
           - mood
           - customer sentiment
           - satisfaction
+          - call sentiment
         data_type: VARCHAR(8)
         sample_values:
           - Negative
           - Positive
       - name: first_call_resolution
-        expr: FIRSTCALLRESOLUTION
+        expr: FIRST_CALL_RESOLUTION
         description: Indicates whether the customer's issue was resolved on the first call to the support team.
         synonyms:
           - first_call_fixed
@@ -278,13 +279,13 @@ tables:
           - "No"
           - "Yes"
       - name: call_summary
-        expr: CALL_SUMMARY
+        expr: CONVERSATION_SUMMARY
         description: A brief summary of customer service calls, including the customer's issue, the representative's response, and any resulting actions or resolutions.
         synonyms:
           - call_description
           - call_details
           - call_overview
-          - conversation_summary
+          - conversation summary
           - summary_of_call
           - call_transcript_summary
           - call summary
@@ -296,7 +297,7 @@ tables:
           - Lisa Carter called about confusion over a denied claim for hail damage on her car with policy number Paul 345678 and claim number CLM 345678. The adjuster determined some damage was pre-existing, but Lisa insisted it was new. A second inspection was scheduled with a different adjuster and her file was flagged for supervisory review. The full claim amount would be processed if the second adjuster agreed all damage was from hail. The reinspection was promised within 48 hours.
     time_dimensions:
       - name: call_date
-        expr: DATETIME
+        expr: DATE
         description: Date of Application Submission
         synonyms:
           - date
@@ -311,7 +312,7 @@ tables:
           - "2024-11-15"
     facts:
       - name: call_duration
-        expr: DURATION
+        expr: TRANSCRIPTION_DURATION_SECONDS
         description: The amount of time, in seconds, that a user spent interacting with the Streamlit app.
         synonyms:
           - length
@@ -335,12 +336,12 @@ tables:
     synonyms: []
     primary_key:
       columns:
-        - AUDIO_FILE_NAME
-        - DATETIME
+        - AUDIO_FILE
+        - DATE
     unique_keys:
       - columns:
-        - AUDIO_FILE_NAME
-        - DATETIME
+        - AUDIO_FILE
+        - DATE
     metrics:
       - name: total_calls
         expr: count(*)
@@ -350,21 +351,21 @@ tables:
           - number of calls
           - call volume
       - name: total_call_time
-        expr: SUM(DURATION)/60
+        expr: SUM(TRANSCRIPTION_DURATION_SECONDS)/60
         description: Total time spent on all calls in minutes
         synonyms:
           - "total duration"
           - "total call time"
           - "cumulative time"
       - name: first_call_resolution_rate
-        expr: (SUM(CASE WHEN call_center_interactions.FIRSTCALLRESOLUTION = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*))
+        expr: (SUM(CASE WHEN call_center_interactions.FIRST_CALL_RESOLUTION = 'Yes' THEN 1 ELSE 0 END) * 100.0 / COUNT(*))
         description: Percentage of calls resolved on first contact
         synonyms:
           - "FCR rate"
           - "resolution rate"
           - "success rate"
       - name: average_call_duration
-        expr: AVG(DURATION)/60
+        expr: AVG(TRANSCRIPTION_DURATION_SECONDS)/60
         description: Average duration of calls in minutes
         synonyms:
           - "AVG DURATION"

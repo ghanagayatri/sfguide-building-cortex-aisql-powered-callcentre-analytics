@@ -277,7 +277,7 @@ def call_audio_processing_procedure(file_path: str):
             return False, "Could not establish Snowpark session"
         
         # Call the stored procedure
-        call_sql = f"CALL PROCESS_UPLOADED_AUDIO('{file_path}')"
+        call_sql = f"CALL process_audio_file('{file_path}')"
         result = session.sql(call_sql).collect()
         
         if result and len(result) > 0:
@@ -315,7 +315,9 @@ def upload_audio_file_to_stage(uploaded_file):
         
         # Refresh the stage to ensure the newly uploaded file is visible
         try:
-            refresh_command = f"ALTER STAGE AUDIO_FILES REFRESH SUBPATH='/{today}/'"
+            refresh_command = f"ALTER STAGE AUDIO_FILES REFRESH"
+
+            # refresh_command = f"ALTER STAGE AUDIO_FILES REFRESH SUBPATH='/{today}/'"
             session.sql(refresh_command).collect()
             st.success(f"✅ Successfully uploaded '{uploaded_file.name}' to folder: {today} and refreshed stage")
         except Exception as refresh_error:
@@ -1117,9 +1119,9 @@ def overview_dashboard():
     def get_date_range():
         try:
             query = """
-                SELECT MIN(DATETIME) as min_date, MAX(DATETIME) as max_date 
-                FROM PUBLIC.STREAMLITAPPTABLE 
-                WHERE DATETIME IS NOT NULL
+                SELECT MIN(DATE) as min_date, MAX(DATE) as max_date 
+                FROM PUBLIC.ANALYZED_TRANSCRIPTIONS_APP 
+                WHERE DATE IS NOT NULL
             """
             result = session.sql(query).collect()
             if result:
@@ -1154,25 +1156,25 @@ def overview_dashboard():
     # Get all audio call details
     base_query = f"""
         SELECT 
-            DATETIME,
-            DURATION,
+            DATE,
+            TRANSCRIPTION_DURATION_SECONDS as CALL_DURATION_SECONDS,
             REPRESENTATIVE,
             CUSTOMER,
-            CALLSENTIMENT,
-            INTENT,
-            CALL_SUMMARY,
-            CLAIMNUMBER,
-            POLICYNUMBER,
-            CALLTOACTION,
-            PURPOSEOFCALL,
+            CONVERSATION_SENTIMENT,
+            CALL_INTENT,
+            CONVERSATION_SUMMARY,
+            CLAIM_NUMBER,
+            POLICY_NUMBER,
+            CALL_TO_ACTION,
+            PURPOSE_OF_CALL,
             ISSUE,
             RESOLUTION,
-            FIRSTCALLRESOLUTION,
-            AUDIO_FILE_NAME,
-            CALL_DIARIZATION,
-            YEAR(DATETIME) || '-' || MONTHNAME(DATETIME) as YEAR_MONTH
-        FROM PUBLIC.STREAMLITAPPTABLE
-        WHERE DATETIME >= '{s_date}' AND DATETIME <= '{e_date}'
+            FIRST_CALL_RESOLUTION,
+            AUDIO_FILE,
+            CONVERSATION_STRUCTURED,
+            YEAR(DATE) || '-' || MONTHNAME(DATE) as YEAR_MONTH
+        FROM PUBLIC.ANALYZED_TRANSCRIPTIONS_APP
+        WHERE DATE >= '{s_date}' AND DATE <= '{e_date}'
     """
     
     all_audio_calls = load_data(base_query)
@@ -1186,14 +1188,14 @@ def overview_dashboard():
         with col1:
             st.metric(label="Total Calls", value=len(all_audio_calls))
         with col2:
-            total_duration = all_audio_calls["DURATION"].sum() / 60  # Convert to minutes
+            total_duration = all_audio_calls["CALL_DURATION_SECONDS"].sum() / 60  # Convert to minutes
             st.metric(label="Total Call Duration (mins)", value=f"{total_duration:.1f}")
 
     st.markdown('----')
 
     # Audio file selection and details (moved above charts)
-    if not all_audio_calls.empty and 'AUDIO_FILE_NAME' in all_audio_calls.columns:
-        audio_files_list = all_audio_calls['AUDIO_FILE_NAME'].dropna().unique().tolist()
+    if not all_audio_calls.empty and 'AUDIO_FILE' in all_audio_calls.columns:
+        audio_files_list = all_audio_calls['AUDIO_FILE'].dropna().unique().tolist()
         audio_files_list.sort()
 
         if audio_files_list:
@@ -1213,7 +1215,7 @@ def overview_dashboard():
             select_audio_file = st.selectbox("Select Audio File", audio_files_list, key='overview_audiofile')
             
             # Get details for selected audio file
-            selected_call = all_audio_calls[all_audio_calls['AUDIO_FILE_NAME'] == select_audio_file].iloc[0]
+            selected_call = all_audio_calls[all_audio_calls['AUDIO_FILE'] == select_audio_file].iloc[0]
             
             # Action buttons
             opt_col1, opt_col2, opt_col3, opt_col4 = st.columns(4)
@@ -1249,20 +1251,25 @@ def overview_dashboard():
                 st.markdown("### 🎵 Audio Player")
                 
                 # Try to play audio from stage using the audio file name
-                audio_file_name = selected_call.get('AUDIO_FILE_NAME', '')
+                audio_file_name = selected_call.get('AUDIO_FILE', '')
                 if audio_file_name:
                     try:
                         # Get the date from the call to construct the stage path
-                        call_date = selected_call.get('DATETIME')
+                        call_date = selected_call.get('DATE')
                         if call_date:
-                            # Convert datetime to date string (YYYY-MM-DD format)
-                            if hasattr(call_date, 'date'):
-                                date_str = call_date.date().strftime("%Y-%m-%d")
+                            # Convert date to date string (YYYY-MM-DD format)
+                            if hasattr(call_date, 'strftime'):
+                                # If it's already a date object
+                                date_str = call_date.strftime("%Y-%m-%d")
                             else:
-                                # Handle string datetime format
+                                # Handle string date format
                                 from datetime import datetime
-                                date_obj = datetime.strptime(str(call_date).split()[0], "%Y-%m-%d")
-                                date_str = date_obj.strftime("%Y-%m-%d")
+                                if isinstance(call_date, str):
+                                    # Try to parse the date string
+                                    date_obj = datetime.strptime(call_date, "%Y-%m-%d")
+                                    date_str = date_obj.strftime("%Y-%m-%d")
+                                else:
+                                    date_str = str(call_date)
                             
                             # Construct stage path: @AUDIO_FILES/YYYY-MM-DD/filename.mp3
                             stage_path = f"@AUDIO_FILES/{date_str}/{audio_file_name}"
@@ -1309,7 +1316,7 @@ def overview_dashboard():
             elif st.session_state.selected_action == 'summary':
                 st.markdown("---")
                 st.markdown("### 📄 Call Summary")
-                summary_text = selected_call.get('CALL_SUMMARY', 'No summary available')
+                summary_text = selected_call.get('CONVERSATION_SUMMARY', 'No summary available')
                 if summary_text and summary_text != 'No summary available':
                     st.markdown(summary_text)
                 else:
@@ -1337,16 +1344,16 @@ def overview_dashboard():
                     st.write(f"• **Customer:** {selected_call.get('CUSTOMER', 'N/A')}")
                     
                     st.markdown("**📞 Call Context:**")
-                    st.write(f"• **Intent:** {selected_call.get('INTENT', 'N/A')}")
-                    st.write(f"• **Duration:** {selected_call.get('DURATION', 'N/A')} seconds")
+                    st.write(f"• **Intent:** {selected_call.get('CALL_INTENT', 'N/A')}")
+                    st.write(f"• **Duration:** {selected_call.get('CALL_DURATION_SECONDS', 'N/A')} seconds")
                     
-                    st.markdown("**🎙️ Call Diarization:**")
-                    diarization = selected_call.get('CALL_DIARIZATION', 'N/A')
-                    if diarization and diarization != 'N/A' and len(str(diarization).strip()) > 0:
-                        # Display diarization in a scrollable text area
-                        st.text_area("Speaker Segments", diarization, height=150, disabled=True, key="diarization_display")
+                    st.markdown("**📝 Structured Conversation:**")
+                    structured_conv = selected_call.get('CONVERSATION_STRUCTURED', 'N/A')
+                    if structured_conv and structured_conv != 'N/A' and len(str(structured_conv).strip()) > 0:
+                        # Display structured conversation in a scrollable text area
+                        st.text_area("Structured Data", structured_conv, height=150, disabled=True, key="structured_display")
                     else:
-                        st.write("• **No diarization data available**")
+                        st.write("• **No structured conversation data available**")
                 
                 with info_col2:
                     st.markdown("**🔍 Issue & Resolution:**")
@@ -1354,8 +1361,8 @@ def overview_dashboard():
                     st.write(f"• **Resolution:** {selected_call.get('RESOLUTION', 'N/A')}")
                     
                     st.markdown("**📈 Performance:**")
-                    st.write(f"• **First Call Resolution:** {selected_call.get('FIRSTCALLRESOLUTION', 'N/A')}")
-                    st.write(f"• **Sentiment:** {selected_call.get('CALLSENTIMENT', 'N/A')}")
+                    st.write(f"• **First Call Resolution:** {selected_call.get('FIRST_CALL_RESOLUTION', 'N/A')}")
+                    st.write(f"• **Sentiment:** {selected_call.get('CONVERSATION_SENTIMENT', 'N/A')}")
             
             # Add a clear button
             if st.session_state.selected_action:
@@ -1382,15 +1389,15 @@ def overview_dashboard():
             # Purpose of call distribution with business insights
             purpose_query = f"""
                 SELECT 
-                    PURPOSEOFCALL as name, 
+                    PURPOSE_OF_CALL as name, 
                     COUNT(*) as value,
                     ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 1) as percentage,
-                    AVG(DURATION) as avg_duration,
-                    AVG(CASE WHEN FIRSTCALLRESOLUTION = 'Yes' THEN 1 ELSE 0 END) * 100 as fcr_rate
-                FROM PUBLIC.STREAMLITAPPTABLE
-                WHERE DATETIME >= '{s_date}' AND DATETIME <= '{e_date}'
-                  AND PURPOSEOFCALL IS NOT NULL
-                GROUP BY PURPOSEOFCALL
+                    AVG(TRANSCRIPTION_DURATION_SECONDS) as avg_duration,
+                    AVG(CASE WHEN FIRST_CALL_RESOLUTION = 'Yes' THEN 1 ELSE 0 END) * 100 as fcr_rate
+                FROM PUBLIC.ANALYZED_TRANSCRIPTIONS_APP
+                WHERE DATE >= '{s_date}' AND DATE <= '{e_date}'
+                  AND PURPOSE_OF_CALL IS NOT NULL
+                GROUP BY PURPOSE_OF_CALL
                 ORDER BY value DESC
                 LIMIT 5
             """
@@ -1447,15 +1454,15 @@ def overview_dashboard():
             # Customer sentiment distribution with satisfaction insights
             sentiment_query = f"""
                 SELECT 
-                    CALLSENTIMENT as name, 
+                    CONVERSATION_SENTIMENT as name, 
                     COUNT(*) as value,
                     ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 1) as percentage,
-                    AVG(DURATION) as avg_duration,
-                    AVG(CASE WHEN FIRSTCALLRESOLUTION = 'Yes' THEN 1 ELSE 0 END) * 100 as fcr_rate
-                FROM PUBLIC.STREAMLITAPPTABLE
-                WHERE DATETIME >= '{s_date}' AND DATETIME <= '{e_date}'
-                  AND CALLSENTIMENT IS NOT NULL
-                GROUP BY CALLSENTIMENT
+                    AVG(TRANSCRIPTION_DURATION_SECONDS) as avg_duration,
+                    AVG(CASE WHEN FIRST_CALL_RESOLUTION = 'Yes' THEN 1 ELSE 0 END) * 100 as fcr_rate
+                FROM PUBLIC.ANALYZED_TRANSCRIPTIONS_APP
+                WHERE DATE >= '{s_date}' AND DATE <= '{e_date}'
+                  AND CONVERSATION_SENTIMENT IS NOT NULL
+                GROUP BY CONVERSATION_SENTIMENT
                 ORDER BY value DESC
                 -- LIMIT 8
             """
@@ -1520,13 +1527,13 @@ def overview_dashboard():
             volume_query = f"""
                 WITH monthly_data AS (
                     SELECT 
-                        YEAR(DATETIME) as call_year,
-                        MONTH(DATETIME) as call_month,
+                        YEAR(DATE) as call_year,
+                        MONTH(DATE) as call_month,
                         COUNT(*) as total_calls,
-                        COUNT(*) / COUNT(DISTINCT DATE(DATETIME)) as avg_daily_calls
-                    FROM PUBLIC.STREAMLITAPPTABLE
-                    WHERE DATETIME >= DATEADD(month, -8, CURRENT_DATE())
-                    GROUP BY YEAR(DATETIME), MONTH(DATETIME)
+                        COUNT(*) / COUNT(DISTINCT DATE) as avg_daily_calls
+                    FROM PUBLIC.ANALYZED_TRANSCRIPTIONS_APP
+                    WHERE DATE >= DATEADD(month, -8, CURRENT_DATE())
+                    GROUP BY YEAR(DATE), MONTH(DATE)
                     ORDER BY call_year DESC, call_month DESC
                     LIMIT 8
                 )
@@ -1568,11 +1575,11 @@ def overview_dashboard():
             st.markdown("**⏱️ Response Efficiency**")
             efficiency_query = f"""
                 SELECT 
-                    AVG(DURATION) as avg_duration,
-                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY DURATION) as median_duration
-                FROM PUBLIC.STREAMLITAPPTABLE
-                WHERE DATETIME >= '{s_date}' AND DATETIME <= '{e_date}'
-                  AND DURATION > 0
+                    AVG(TRANSCRIPTION_DURATION_SECONDS) as avg_duration,
+                    PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY TRANSCRIPTION_DURATION_SECONDS) as median_duration
+                FROM PUBLIC.ANALYZED_TRANSCRIPTIONS_APP
+                WHERE DATE >= '{s_date}' AND DATE <= '{e_date}'
+                  AND TRANSCRIPTION_DURATION_SECONDS > 0
             """
             eff_df = load_data(efficiency_query)
             
@@ -1591,20 +1598,20 @@ def overview_dashboard():
             st.markdown("**😊 Customer Sentiment**")
             sentiment_query = f"""
                 SELECT 
-                    CALLSENTIMENT,
+                    CONVERSATION_SENTIMENT,
                     COUNT(*) as count,
                     ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 1) as percentage
-                FROM PUBLIC.STREAMLITAPPTABLE
-                WHERE DATETIME >= '{s_date}' AND DATETIME <= '{e_date}'
-                  AND CALLSENTIMENT IS NOT NULL
-                GROUP BY CALLSENTIMENT
+                FROM PUBLIC.ANALYZED_TRANSCRIPTIONS_APP
+                WHERE DATE >= '{s_date}' AND DATE <= '{e_date}'
+                  AND CONVERSATION_SENTIMENT IS NOT NULL
+                GROUP BY CONVERSATION_SENTIMENT
                 ORDER BY count DESC
                 -- LIMIT 1
             """
             sent_df = load_data(sentiment_query)
             
             if not sent_df.empty:
-                top_sentiment = sent_df['CALLSENTIMENT'].iloc[0]
+                top_sentiment = sent_df['CONVERSATION_SENTIMENT'].iloc[0]
                 sentiment_pct = sent_df['PERCENTAGE'].iloc[0]
                 
                 # Color code based on sentiment
@@ -1627,12 +1634,12 @@ def overview_dashboard():
             st.markdown("**🎯 Resolution Quality**")
             resolution_query = f"""
                 SELECT 
-                    AVG(CASE WHEN FIRSTCALLRESOLUTION = 'Yes' THEN 1 ELSE 0 END) * 100 as fcr_rate,
-                    COUNT(CASE WHEN FIRSTCALLRESOLUTION = 'Yes' THEN 1 END) as resolved_count,
+                    AVG(CASE WHEN FIRST_CALL_RESOLUTION = 'Yes' THEN 1 ELSE 0 END) * 100 as fcr_rate,
+                    COUNT(CASE WHEN FIRST_CALL_RESOLUTION = 'Yes' THEN 1 END) as resolved_count,
                     COUNT(*) as total_count
-                FROM PUBLIC.STREAMLITAPPTABLE
-                WHERE DATETIME >= '{s_date}' AND DATETIME <= '{e_date}'
-                  AND FIRSTCALLRESOLUTION IS NOT NULL
+                FROM PUBLIC.ANALYZED_TRANSCRIPTIONS_APP
+                WHERE DATE >= '{s_date}' AND DATE <= '{e_date}'
+                  AND FIRST_CALL_RESOLUTION IS NOT NULL
             """
             res_df = load_data(resolution_query)
             
@@ -1661,11 +1668,11 @@ def overview_dashboard():
             SELECT 
                 REPRESENTATIVE as rep_name,
                 COUNT(*) as total_calls,
-                AVG(DURATION) as avg_duration,
-                AVG(CASE WHEN FIRSTCALLRESOLUTION = 'Yes' THEN 1 ELSE 0 END) * 100 as fcr_rate,
-                SUM(DURATION) as total_time
-            FROM PUBLIC.STREAMLITAPPTABLE
-            WHERE DATETIME >= '{s_date}' AND DATETIME <= '{e_date}'
+                AVG(TRANSCRIPTION_DURATION_SECONDS) as avg_duration,
+                AVG(CASE WHEN FIRST_CALL_RESOLUTION = 'Yes' THEN 1 ELSE 0 END) * 100 as fcr_rate,
+                SUM(TRANSCRIPTION_DURATION_SECONDS) as total_time
+            FROM PUBLIC.ANALYZED_TRANSCRIPTIONS_APP
+            WHERE DATE >= '{s_date}' AND DATE <= '{e_date}'
               AND REPRESENTATIVE IS NOT NULL
             GROUP BY REPRESENTATIVE
             ORDER BY total_calls DESC
@@ -1714,23 +1721,23 @@ def overview_dashboard():
         # First call resolution over time
         fcr_query = f"""
             SELECT 
-                FIRSTCALLRESOLUTION,
-                YEAR(DATETIME) || '-' || MONTHNAME(DATETIME) as YEAR_MONTH,
+                FIRST_CALL_RESOLUTION,
+                YEAR(DATE) || '-' || MONTHNAME(DATE) as YEAR_MONTH,
                 COUNT(*) as CALL_COUNT,
-                YEAR(DATETIME) as call_year,
-                MONTH(DATETIME) as call_month
-            FROM PUBLIC.STREAMLITAPPTABLE
-            WHERE DATETIME >= '{s_date}' AND DATETIME <= '{e_date}'
-              AND FIRSTCALLRESOLUTION IS NOT NULL
-            GROUP BY FIRSTCALLRESOLUTION, YEAR_MONTH, YEAR(DATETIME), MONTH(DATETIME)
-            ORDER BY call_year ASC, call_month ASC, FIRSTCALLRESOLUTION
+                YEAR(DATE) as call_year,
+                MONTH(DATE) as call_month
+            FROM PUBLIC.ANALYZED_TRANSCRIPTIONS_APP
+            WHERE DATE >= '{s_date}' AND DATE <= '{e_date}'
+              AND FIRST_CALL_RESOLUTION IS NOT NULL
+            GROUP BY FIRST_CALL_RESOLUTION, YEAR_MONTH, YEAR(DATE), MONTH(DATE)
+            ORDER BY call_year ASC, call_month ASC, FIRST_CALL_RESOLUTION
         """
         fcr_df = load_data(fcr_query)
         
         if not fcr_df.empty:
             fig = px.bar(
                 fcr_df, x='YEAR_MONTH', y='CALL_COUNT',
-                color='FIRSTCALLRESOLUTION', barmode='group',
+                color='FIRST_CALL_RESOLUTION', barmode='group',
                 labels={'CALL_COUNT': 'Total Count'}
             )
             fig.update_layout(

@@ -11,6 +11,22 @@ CREATE WAREHOUSE IF NOT EXISTS cca_xs_wh
 USE DATABASE call_centre_analytics_db;
 USE SCHEMA PUBLIC;
 
+CREATE OR REPLACE API INTEGRATION GITHUB_INTEGRATION_CALL_CENTER_DEMO
+    api_provider = git_https_api
+    api_allowed_prefixes = ('https://github.com/Snowflake-Labs/')
+    enabled = true
+    comment='Git integration with Snowflake-Labs Github Repository.';
+
+-- Create the integration with the Github demo repository
+CREATE GIT REPOSITORY GITHUB_REPO_CALL_CENTER_DEMO
+	ORIGIN = 'https://github.com/Snowflake-Labs/sfguide-building-cortex-aisql-powered-callcentre-analytics' 
+	API_INTEGRATION = 'GITHUB_INTEGRATION_CALL_CENTER_DEMO' 
+	COMMENT = 'Github Repository from Snowflake-Labs with a demo for Call Center Analytics.';
+
+
+GRANT READ ON GIT REPOSITORY call_centre_analytics_db.public.GITHUB_REPO_CALL_CENTER_DEMO TO ROLE DE_DEMO_ROLE;
+
+
 -- GRANT OWNERSHIP ON THE DB TO THE CUSTOM ROLE
 GRANT OWNERSHIP ON DATABASE call_centre_analytics_db TO ROLE DE_DEMO_ROLE COPY CURRENT GRANTS;
 GRANT OWNERSHIP ON ALL SCHEMAS IN DATABASE call_centre_analytics_db TO ROLE DE_DEMO_ROLE COPY CURRENT GRANTS;
@@ -42,28 +58,28 @@ DIRECTORY = (ENABLE = TRUE)
 COMMENT = ' stores the semantic yaml file for cortex analyst';
 
 
+CREATE STAGE IF NOT EXISTS AUDIO_FILES
+    ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
+    DIRECTORY = ( ENABLE = true )
+    COMMENT = 'Used to store recordings';
 
--- Stored the audio file path and the transcription of the audio file. Duration is in seconds.
- CREATE or REPLACE TABLE ALL_CLAIMS_RAW (
-	DATETIME DATE,
-	AUDIOFILE VARCHAR(16777216),
-    AUDIOFILE_RELATIVE_PATH VARCHAR(16777216),
-	CONVERSATION VARCHAR(16777216),
-	PRESIGNED_URL_PATH VARCHAR(16777216),
-	DURATION FLOAT  NULL);
+CREATE STAGE IF NOT EXISTS UDF
+    ENCRYPTION = (TYPE = 'SNOWFLAKE_SSE')
+    DIRECTORY = (ENABLE = TRUE)
+    COMMENT = 'Used to create UDFs';
 
- CREATE or REPLACE TABLE AUDIO_CLAIMS_EXTRACTED_INFO 
-    (
-        DATETIME DATE,
-        AUDIO_FILE_NAME VARCHAR(100),
-        AUDIO_FULL_FILE_PATH VARCHAR(16777216),
-        RAW_CONVERSATION VARCHAR(16777216),
-        PROMPTED_CONVERSATION VARCHAR(16777216),
-        DURATION FLOAT,
-        CALL_DETAILS VARIANT,
-        CALL_SUMMARY VARCHAR(16777216),
-        CALL_SENTIMENT variant,
-        REPONSE_GIVEN FLOAT
-    );
 
+-- Copy audio files into the stage
+COPY FILES
+  INTO @AUDIO_FILES
+  FROM @CALL_CENTRE_ANALYTICS_DB.PUBLIC.GITHUB_REPO_CALL_CENTER_DEMO/branches/main/audio_files/
+  PATTERN='.*[.]mp3';
+ALTER STAGE AUDIO_FILES REFRESH;
+
+
+COPY FILES
+  INTO @SEMANTIC_MODEL_STAGE
+  FROM @CALL_CENTRE_ANALYTICS_DB.PUBLIC.GITHUB_REPO_CALL_CENTER_DEMO/branches/main/call_center_analytics_model.yaml;
+  
+ALTER STAGE SEMANTIC_MODEL_STAGE REFRESH;
 
