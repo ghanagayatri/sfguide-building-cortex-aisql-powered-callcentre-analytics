@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import json
 import time
-from datetime import datetime, timedelta, date
+import datetime, timedelta, date, date as date_class
 from typing import Dict, Any, List
 from snowflake.snowpark.context import get_active_session
 import _snowflake
@@ -1126,9 +1126,9 @@ def overview_dashboard():
             result = session.sql(query).collect()
             if result:
                 return result[0]['MIN_DATE'], result[0]['MAX_DATE']
-            return datetime.date(2024, 1, 1), datetime.date.today()
+            return date_class(2024, 1, 1), date_class.today()
         except:
-            return datetime.date(2024, 1, 1), datetime.date.today()
+            return date_class(2024, 1, 1), date_class.today()
 
     @st.cache_data
     def load_data(query_of_interest):
