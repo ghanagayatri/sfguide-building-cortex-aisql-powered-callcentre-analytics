@@ -13,13 +13,13 @@ USE SCHEMA PUBLIC;
 
 CREATE OR REPLACE API INTEGRATION GITHUB_INTEGRATION_CALL_CENTER_DEMO
     api_provider = git_https_api
-    api_allowed_prefixes = ('https://github.com/Snowflake-Labs/')
+    api_allowed_prefixes = ('https://github.com/ghanagayatri/')
     enabled = true
     comment='Git integration with Snowflake-Labs Github Repository.';
 
 -- Create the integration with the Github demo repository
 CREATE GIT REPOSITORY GITHUB_REPO_CALL_CENTER_DEMO
-	ORIGIN = 'https://github.com/Snowflake-Labs/sfguide-building-cortex-aisql-powered-callcentre-analytics' 
+	ORIGIN = 'https://github.com/ghanagayatri/sfguide-building-cortex-aisql-powered-callcentre-analytics.git' 
 	API_INTEGRATION = 'GITHUB_INTEGRATION_CALL_CENTER_DEMO' 
 	COMMENT = 'Github Repository from Snowflake-Labs with a demo for Call Center Analytics.';
 
@@ -36,7 +36,7 @@ GRANT USAGE ON WAREHOUSE cca_xs_wh TO ROLE DE_DEMO_ROLE;
 GRANT EXECUTE TASK ON ACCOUNT TO ROLE DE_DEMO_ROLE;
 
 -- Update the username 
-GRANT ROLE DE_DEMO_ROLE TO USER <username>; 
+GRANT ROLE DE_DEMO_ROLE TO USER GGHANAKOTA ; 
 
 USE ROLE DE_DEMO_ROLE;
 USE DATABASE call_centre_analytics_db;
@@ -82,4 +82,3 @@ COPY FILES
   FROM @CALL_CENTRE_ANALYTICS_DB.PUBLIC.GITHUB_REPO_CALL_CENTER_DEMO/branches/main/call_center_analytics_model.yaml;
   
 ALTER STAGE SEMANTIC_MODEL_STAGE REFRESH;
-
