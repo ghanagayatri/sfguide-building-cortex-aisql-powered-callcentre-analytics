@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import json
 import time
-import datetime, timedelta, date, date as date_class
+from datetime import datetime, timedelta, date, date as date_class
 from typing import Dict, Any, List
 from snowflake.snowpark.context import get_active_session
 import _snowflake
